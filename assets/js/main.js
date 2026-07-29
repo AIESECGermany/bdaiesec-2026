@@ -206,7 +206,9 @@ if (form) {
 
 /* ── YouTube facade: load the real player only on click (no file:// embed errors) ── */
 document.querySelectorAll('.video-facade').forEach((el) => {
-  const load = () => {
+  const load = (e) => {
+    // let the Datenschutz link in the consent notice work without loading the player
+    if (e && e.target.closest && e.target.closest('a')) return;
     if (el.dataset.loaded) return;
     el.dataset.loaded = '1';
     const id = el.dataset.video;

@@ -145,6 +145,48 @@ scale(1.06) overscan so it never gaps). All `prefers-reduced-motion` + touch gua
   root screenshots), `.nojekyll` (plain static serving), `CNAME` (`unternehmen.aiesec.de`).
   Repo not yet `git init`-ed.
 
+## DONE — DSGVO / no-external-calls pass (2026-07-29)
+Owner requirement: **no Google Fonts, no external service calls** (German data-protection
+exposure — the LG München I ruling on embedded Google Fonts, Az. 3 O 17493/20).
+
+- **Google Fonts removed → self-hosted.** All 6 pages dropped the two `preconnect`s and the
+  `fonts.googleapis.com/css2` stylesheet. Fonts now live in `assets/fonts/` as woff2
+  (`dm-sans-latin`, `dm-sans-latin-ext`, `dancing-script-latin`, `dancing-script-latin-ext`
+  — ~134 KB total), declared as `@font-face` at the top of `style.css`. **Both families are
+  variable fonts**, so ONE file per unicode subset covers every weight (DM Sans declared
+  `font-weight:300 800`). Licence: SIL OFL 1.1 — self-hosting is permitted.
+  Each page now `preload`s `dm-sans-latin.woff2` instead of preconnecting to Google.
+  **`@font-face` URLs are relative to style.css** (`../fonts/…`), so they resolve from
+  root pages and sub-pages alike — do not "fix" them to page-relative.
+- **YouTube poster de-Googled.** `hochschulmarketing` loaded its thumbnail from
+  `i.ytimg.com` on page load — a Google request before any consent. Downloaded to
+  `assets/images/video-y2b-poster.jpg` and referenced locally.
+- **Video consent notice added.** `.video-consent` (CSS) + a line in the `.video-facade`
+  on hochschulmarketing: clicking loads YouTube and transfers data to Google, linking the
+  Datenschutzerklärung. `main.js::load()` now ignores clicks that land on an `<a>` so the
+  link is clickable without starting the player.
+- **CSP tightened** on all 6 pages — `style-src` and `font-src` are now `'self'`,
+  `img-src 'self' data:`, `frame-src` only `youtube-nocookie.com`. Anything that tries to
+  reach Google again will now be *blocked by the page itself*, not just absent.
+- **Verified by netlog, not by eye.** Headless Chrome with background networking disabled,
+  netlog diffed against an `about:blank` baseline: **zero page-attributable external
+  requests** on all 5 real pages. (`csp.withgoogle.com` shows up in the raw log only inside
+  a *response header* of Chrome's own safebrowsing call — no DNS, no socket. Ignore it if
+  you re-run this.) Screenshots confirmed DM Sans 300/400/600/800 + Dancing Script + umlauts
+  all render from the local files.
+
+### Still open (owner's call, NOT code problems)
+- **Web3Forms** (`api.web3forms.com`) is still the form backend. It only fires on submit
+  (user-initiated), so it is not a page-load leak — but it is a third-party processor
+  receiving name/e-mail/phone/company, so it needs an AVV and a mention in the
+  Datenschutzerklärung. The owner plans to replace it with a self-hosted DB backend, which
+  removes the issue entirely.
+- **GitHub Pages** is US-hosted (Microsoft/Fastly) and sees every visitor IP. Common and
+  widely tolerated, but belongs in the Datenschutzerklärung. Moving to EU hosting would be
+  the fully clean answer.
+- **Datenschutzerklärung** currently links to `aiesec.de/datenschutz`, which won't mention
+  this site's form processor or host. Needs updating by whoever owns that page.
+
 ## DECISIONS (settled — do not relitigate)
 - **NEVER fabricate content.** No invented testimonials, customer names, quotes, logos, or
   statistics. Social proof must come from the owner (real, with permission) or not appear.
@@ -156,28 +198,65 @@ scale(1.06) overscan so it never gaps). All `prefers-reduced-motion` + touch gua
   The "how we work" story lives in the sub-pages' existing process sections
   (`.steps`). Do not add it to the homepage unless the owner explicitly reverses this.
 
-## NEXT (in priority order)
-1. **Deploy** — deploy artifacts ready (`.gitignore`, `.nojekyll`, `CNAME`). Just need
-   `git init` + first commit (not a repo yet) → push to owner's GitHub → enable Pages →
-   point `unternehmen.aiesec.de` DNS (CNAME → `<user>.github.io`). Owner asked to commit
-   to their GitHub before the talentbindung slice.
-2. **NEXT SLICE — talentbindung overhaul + honest social proof** (runs after GitHub commit).
-   Scope:
-   - Add back **real, owner-supplied testimonials** (the fabricated ones were removed
-     2026-06-08) across the sub-pages — real names/roles/quotes WITH permission, or real
-     headshots. Until then the pages ship without testimonials (honest).
-   - Source **distinct abroad / volunteer-project photos** for talentbindung (the stories
-     section that double-used `about-1.jpg` is gone; the page now needs fresh GVP imagery).
-   - Give the 6 "Partnerländer & Projekte" cards **real project imagery** if photos
-     arrive (today they're map-pin tiles + SDG badges — NOT flag emoji, which break on
-     Windows; keep that constraint).
-   - Audit copy/flow once more vs. the GVP narrative; no PDF reference exists for the
-     sub-pages, so keep current wording unless owner provides new text.
-   - Carryover assets to slot in where they fit: `partner-zoho-booth.jpg`,
-     `event-companyday-db.jpg`. Still missing a real **Tesla** logo (a Tesla banner is
-     visible inside `event-y2b-booth.jpg` as a stopgap).
-3. Optional, only if owner asks: `/blog/index.html` placeholder; the Y2B Forum /
-   partner-jobs page (reference p.6–7 — needs per-partner photos + job-listing data).
+## NEXT — REBUILD Kooperationsmöglichkeiten from the REAL old site
+
+**Deploy: DONE.** Repo `theonlymosmos/bdaiesec` (public), GitHub Pages live at
+`https://theonlymosmos.github.io/bdaiesec/`. CNAME removed for now (re-add for the
+custom domain later). Rollback tags: `backup-2026-06-09-live|polish|wow`.
+
+**The 3 cooperation pages + CSR are currently DEACTIVATED** (redirect to `coming-soon.html`)
+because their copy was invented, NOT from any source. They must be rebuilt from the OLD
+site captures in `oldwebsite endpoints/old website/` (image-only PDFs — render with PyMuPDF
+`get_pixmap(matrix=fitz.Matrix(1.85,1.85))`, Letter-sized pages, read one at a time).
+Design language = the homepage/`style.css` system + the B2B reference where it applies.
+**RULE: transcribe copy verbatim from the PDFs at higher zoom during build — invent nothing.**
+
+### Real old-site structure (verified by reading the PDFs 2026-06-09)
+Headings/labels below were read directly; longer body paragraphs were partly legible and
+MUST be re-read at higher zoom before transcribing (do not paraphrase from memory).
+
+- **Global Talent** (`…global-talent…pdf`, 4pp): Hero "**Internationale Talente**" + Global
+  Talent logo + "Jetzt anmelden" (sample role card: "Web Development Intern · 26 weeks ·
+  Munich, Germany"). → "**Warum Global Talent?**" 3 cards: *Passende Talente gewinnen* /
+  *Globale Perspektiven* / *Zukunftsfähige Unternehmenskultur*. → "**Recruiting in vier
+  Schritten**": 1 *Veröffentlichung der Ausschreibung*, 2 *Auswahl der Praktikant:innen*,
+  3 *Administration und Logistik*, 4 *Betreuung in Deutschland*. → "**Unser Netzwerk**"
+  stats: 250+ Partner in Deutschland · 100+ (2nd label hard to read — VERIFY) · 5000+ Aktive
+  Bewerber auf unserer Plattform · 70+ Jahre Erfahrung. + 3 colored "Mehr erfahren" cards
+  (content cut across pages — VERIFY). → teal CTA "**Jetzt internationale Talente mit AIESEC
+  finden!**" → partner logos → footer.
+- **Hochschulmarketing** (`…branding-recruiting…pdf`, 3pp): Hero "**Hochschulmarketing &
+  Recruiting**" + "Kontakt aufnehmen". → "**Warum mit AIESEC?**" stats: **70+** Jahre
+  Erfahrung · **600** Ehrenamtliche Mitglieder in Deutschland · **28** Standorte
+  (Lokalkomitees) in Deutschland · **42** Universitäten in unserem Netzwerk. → blue CTA
+  band "Wir nehmen in Kürze mit Ihnen Kontakt auf." → "Unsere Partner" logos → footer.
+  **NOTE:** the real page is SIMPLE — it has NO Local/Regional/National pricing tiers, NO
+  region-grouped Standorte, NO testimonials. The current built page invented all of that.
+- **Talentbindung** (`…talentbindung…pdf`, 3pp): Hero "**Talentbindung**" + "Kontakt
+  aufnehmen". → "**Wie funktioniert es?**" 2 cards: *Angebot für den Talentpool* / *Junge
+  Talente entwickeln* (body legible-but-blurry — VERIFY). pp2–3 not yet read. The current
+  built page (GVP, 3 pain cards, 5-step flow, Partnerländer) is invented — replace.
+- **CSR** (`…csr…pdf`, 4pp): Hero "**(Corporate) Social Responsibility**" + "Kontakt
+  aufnehmen". → "**Unsere Ziele für Deutschland**" (body not yet read). pp2–4 not yet read.
+  The site currently has NO CSR page (removed); the old site HAS one — rebuild + re-add to nav.
+- Also present in the folder (not yet built): **Talentprofile** (2 PDFs) and **Youth2Business
+  Forum** (the Y2B page also appears in the B2B reference PDF pp.6–7).
+
+### Real partners on the old site (logos we may be MISSING)
+DHL · DB · **pwc** · Huawei · **DAAD** · **Bayern LB** · **HHLA** · MLP · **NORD/LB?** (verify).
+The current built wall uses Mondelēz/Zoho/ING/Ventuseo/Tesla — reconcile with the owner.
+
+### Cross-check flag (verify before trusting current numbers)
+Homepage stat band (650+ Mitglieder, 40+ Unis, 24 Standorte, 75+ Jahre) does NOT match the
+old site's hochschulmarketing numbers (600 / 42 / 28 / 70+). Homepage follows the B2B
+reference design — confirm the homepage numbers against the B2B PDF and the owner; don't
+assume either set is correct.
+
+### Suggested order
+1. Global Talent (most content already mapped) → 2. Hochschulmarketing (simplify to the
+real short structure) → 3. Talentbindung → 4. CSR (+ re-add to nav). Per page: re-render the
+PDF, transcribe exact copy, build in the design system, wire real photos/logos we actually
+have, verify desktop+mobile, commit, then flip its `coming-soon` redirect off.
 
 ## Verify a page (headless Chrome, no extra tooling)
 Chrome on Windows clamps the min viewport to ~484px, so true mobile can't be shot
