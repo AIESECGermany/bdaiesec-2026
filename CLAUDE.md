@@ -200,9 +200,21 @@ exposure — the LG München I ruling on embedded Google Fonts, Az. 3 O 17493/20
 
 ## NEXT — REBUILD Kooperationsmöglichkeiten from the REAL old site
 
-**Deploy: DONE.** Repo `theonlymosmos/bdaiesec` (public), GitHub Pages live at
-`https://theonlymosmos.github.io/bdaiesec/`. CNAME removed for now (re-add for the
-custom domain later). Rollback tags: `backup-2026-06-09-live|polish|wow`.
+**Repo moved (2026-07-29).** Work now happens on the AIESEC org repo —
+**`AIESECGermany/bdaiesec-2026`** (public), which is a fork of the original
+`theonlymosmos/bdaiesec`. Git remotes in this working copy:
+- `origin` → `AIESECGermany/bdaiesec-2026` ← **push here**
+- `personal` → `theonlymosmos/bdaiesec` (the old repo; kept as a backup mirror, now behind)
+
+The owner has WRITE on the org repo and treats it as his own — direct pushes to `main` are
+fine, no PR ceremony needed. No branch protection is set.
+
+**GitHub Pages is NOT yet enabled on `AIESECGermany/bdaiesec-2026`** — pushing does not
+deploy anything live. Someone with admin on the org repo has to switch Pages on
+(Settings → Pages → Deploy from branch `main` / root). Until then the site is code-only.
+The old repo's Pages (`https://theonlymosmos.github.io/bdaiesec/`) is stale.
+CNAME removed for now (re-add `unternehmen.aiesec.de` once Pages is on the org repo).
+Rollback tags on the old repo: `backup-2026-06-09-live|polish|wow`.
 
 **The 3 cooperation pages + CSR are currently DEACTIVATED** (redirect to `coming-soon.html`)
 because their copy was invented, NOT from any source. They must be rebuilt from the OLD
