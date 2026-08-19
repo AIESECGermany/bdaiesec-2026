@@ -114,8 +114,12 @@
           <input id="f-company" type="text" name="Unternehmen" placeholder="Name des Unternehmens" required/>
         </div>
         <div class="form-group">
-          <label for="f-website">Website (URL)</label>
-          <input id="f-website" type="url" name="Website" placeholder="https://www.unternehmen.de"/>
+          <label for="f-website">Website</label>
+          <input id="f-website" type="text" name="Website" inputmode="url" autocomplete="url"
+                 placeholder="aiesec.de"
+                 pattern="\s*(https?://)?([a-zA-Z0-9\u00c0-\u024f\-]+\.)+[a-zA-Z]{2,}(/.*)?\s*"
+                 title="Bitte eine Webadresse mit Endung eingeben, z. B. aiesec.de"/>
+          <span class="form-hint">Ohne https:// – z. B. aiesec.de</span>
         </div>
       </div>
       <div class="form-row">

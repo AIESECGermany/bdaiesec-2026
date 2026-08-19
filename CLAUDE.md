@@ -65,6 +65,14 @@ Defined in `assets/css/style.css`:
   quick inquiries. All `nav-cta` "Jetzt Partner werden" buttons (home + 3 sub-pages)
   now point to `anmeldung.html`. New consent-checkbox CSS in `style.css` (`.form-consent`,
   `.trust-*`, `.anmeldung-*`, `.event-photo`, `.dark-cta-split`).
+  **Website field (2026-08-19):** was `type="url"`, so the browser rejected anything
+  without `https://`. Now `type="text"` + `inputmode="url"` with a lenient `pattern`
+  that only requires a dot + a 2+ letter TLD (`aiesec.de` passes, `aiesec` doesn't).
+  Placeholder `aiesec.de`, a `.form-hint` line under it, and a German error message via
+  `setCustomValidity` in `main.js`. `main.js::normaliseWebsite()` trims and prepends
+  `https://` on submit (only for values that pass the regex), so the lead still arrives
+  as a clickable URL. The HTML `pattern` and the JS `WEBSITE_RE` must stay in sync — both
+  tolerate surrounding whitespace so a pasted value validates.
   **Note:** `--gray-300`/`--gray-400` are NOT defined in `:root` (only 50/100/200/500/700/900)
   — using them yields an invisible border. Use a literal hex or a defined token.
 - **`talentbindung/index.html`** (§5.3 GVP) — hero, 3 pain→Lösung cards, "Wie

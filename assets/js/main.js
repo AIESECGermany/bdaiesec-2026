@@ -171,6 +171,30 @@ if (!reduceMotion && finePointer) {
   }
 }
 
+/* ── Website field: "aiesec.de" is enough, no https:// required ── */
+const websiteField = document.getElementById('f-website');
+const WEBSITE_RE = /^(https?:\/\/)?([\w\u00c0-\u024f\-]+\.)+[a-z]{2,}(\/.*)?$/i;
+if (websiteField) {
+  const checkWebsite = () => {
+    const v = websiteField.value.trim();
+    websiteField.setCustomValidity(
+      !v || WEBSITE_RE.test(v) ? '' : 'Bitte eine Webadresse mit Endung eingeben, z. B. aiesec.de'
+    );
+  };
+  websiteField.addEventListener('input', checkWebsite);
+  // trim on blur so a pasted "  firma.de " still validates
+  websiteField.addEventListener('blur', () => {
+    websiteField.value = websiteField.value.trim();
+    checkWebsite();
+  });
+}
+/* prepend https:// on submit so the lead we receive is a clickable link */
+function normaliseWebsite() {
+  if (!websiteField) return;
+  const v = websiteField.value.trim();
+  websiteField.value = (v && WEBSITE_RE.test(v) && !/^https?:\/\//i.test(v)) ? 'https://' + v : v;
+}
+
 /* ── Contact form (Web3Forms) ── */
 const form = document.getElementById('contactForm');
 const submitBtn = document.getElementById('submitBtn');
@@ -178,6 +202,7 @@ const formSuccess = document.getElementById('formSuccess');
 if (form) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    normaliseWebsite();
     const original = submitBtn.innerHTML;
     submitBtn.textContent = 'Wird gesendet...';
     submitBtn.disabled = true;

@@ -421,6 +421,7 @@ select:focus-visible,textarea:focus-visible{
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{
   border-color:var(--blue);background:#fff;box-shadow:0 0 0 4px rgba(3,126,243,.12)}
 .form-group textarea{resize:vertical;min-height:108px}
+.form-group .form-hint{font-size:.72rem;color:var(--gray-500);margin-top:-.1rem;line-height:1.4}
 .form-success{display:none;margin-top:1rem;padding:14px 18px;background:#E6F9F4;border:1px solid var(--teal);
   border-radius:12px;color:#00705A;font-size:.9rem;font-weight:600}
 .form-success.visible{display:block;animation:fadeIn .4s ease}
