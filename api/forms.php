@@ -37,20 +37,20 @@ try {
 
     $source = normalizeSource($body, $_SERVER);
     $campaignContext = normalizeCampaignContext($body, $_SERVER);
-    $company = safeTrim($body['company'] ?? $body['Unternehmen'] ?? null);
-    $website = safeTrim($body['website'] ?? $body['Website'] ?? null);
-    $firstName = safeTrim($body['first_name'] ?? $body['Vorname'] ?? $body['firstname'] ?? null);
-    $lastName = safeTrim($body['last_name'] ?? $body['Nachname'] ?? $body['lastname'] ?? null);
-    $fullName = safeTrim($body['full_name'] ?? $body['name'] ?? null) ?? trim(($firstName ?? '') . ' ' . ($lastName ?? ''));
-    $phone = safeTrim($body['phone'] ?? $body['Telefon'] ?? null);
-    $productInterest = safeTrim($body['product_interest'] ?? $body['Produktinteresse'] ?? $body['interest'] ?? null);
-    $city = safeTrim($body['city'] ?? $body['Stadt'] ?? null);
-    $sourceChannel = safeTrim($body['source_channel'] ?? $body['Quelle'] ?? null);
+    $company = safeTrim(readFieldValue($body, ['company', 'Unternehmen']));
+    $website = safeTrim(readFieldValue($body, ['website', 'Website']));
+    $firstName = safeTrim(readFieldValue($body, ['first_name', 'Vorname', 'firstname']));
+    $lastName = safeTrim(readFieldValue($body, ['last_name', 'Nachname', 'lastname']));
+    $fullName = safeTrim(readFieldValue($body, ['full_name', 'name'])) ?? trim(($firstName ?? '') . ' ' . ($lastName ?? ''));
+    $phone = safeTrim(readFieldValue($body, ['phone', 'Telefon']));
+    $productInterest = safeTrim(readFieldValue($body, ['product_interest', 'Produktinteresse', 'interest']));
+    $city = safeTrim(readFieldValue($body, ['city', 'Stadt']));
+    $sourceChannel = safeTrim(readFieldValue($body, ['source_channel', 'Quelle']));
     $interest = safeTrim($body['interest'] ?? null);
-    $profile = safeTrim($body['profile'] ?? $body['profil'] ?? null);
+    $profile = safeTrim(readFieldValue($body, ['profile', 'profil']));
     $message = safeTrim($body['message'] ?? null);
-    $consentContact = normalizeBoolean($body['consent_contact'] ?? $body['Einwilligung Kontakt'] ?? $body['contact-consent'] ?? false);
-    $consentPrivacy = normalizeBoolean($body['consent_privacy'] ?? $body['Datenschutz akzeptiert'] ?? $body['privacy-consent'] ?? false);
+    $consentContact = normalizeBoolean(readFieldValue($body, ['consent_contact', 'Einwilligung_Kontakt', 'Einwilligung Kontakt', 'contact-consent']));
+    $consentPrivacy = normalizeBoolean(readFieldValue($body, ['consent_privacy', 'Datenschutz_akzeptiert', 'Datenschutz akzeptiert', 'privacy-consent']));
 
     $dsn = dbDsn();
     $pdo = null;
@@ -162,15 +162,15 @@ try {
     $smtpReady = $smtpConfig['host'] !== '' && $smtpConfig['username'] !== '' && $smtpConfig['password'] !== '';
 
     if ($smtpReady) {
-        $subject = 'Nuevo lead: ' . ($company ?: $fullName ?: 'AIESEC formulario');
-        $mailBody = "Fuente: {$source}\n";
-        $mailBody .= "Empresa: " . ($company ?: '-') . "\n";
-        $mailBody .= "Nombre: " . ($fullName ?: '-') . "\n";
+        $subject = 'New lead: ' . ($company ?: $fullName ?: 'AIESEC form');
+        $mailBody = "Source: {$source}\n";
+        $mailBody .= "Company: " . ($company ?: '-') . "\n";
+        $mailBody .= "Name: " . ($fullName ?: '-') . "\n";
         $mailBody .= "Email: {$email}\n";
-        $mailBody .= "Telefono: " . ($phone ?: '-') . "\n";
-        $mailBody .= "Producto / interés: " . ($productInterest ?: $interest ?: '-') . "\n";
-        $mailBody .= "Ciudad: " . ($city ?: '-') . "\n";
-        $mailBody .= "Cómo nos encontró: " . ($sourceChannel ?: '-') . "\n";
+        $mailBody .= "Phone: " . ($phone ?: '-') . "\n";
+        $mailBody .= "Product / interest: " . ($productInterest ?: $interest ?: '-') . "\n";
+        $mailBody .= "City: " . ($city ?: '-') . "\n";
+        $mailBody .= "How they found us: " . ($sourceChannel ?: '-') . "\n";
         $mailBody .= "Website: " . ($website ?: '-') . "\n";
         $mailBody .= "Referrer URL: " . ($campaignContext['referrer_url'] ?: '-') . "\n";
         $mailBody .= "Landing URL: " . ($campaignContext['landing_url'] ?: '-') . "\n";
@@ -178,10 +178,10 @@ try {
         $mailBody .= "UTM medium: " . ($campaignContext['utm_medium'] ?: '-') . "\n";
         $mailBody .= "UTM campaign: " . ($campaignContext['utm_campaign'] ?: '-') . "\n";
         $mailBody .= "Campaign params: " . ($campaignContext['campaign_params'] !== '' ? $campaignContext['campaign_params'] : '-') . "\n";
-        $mailBody .= "Perfil: " . ($profile ?: '-') . "\n";
-        $mailBody .= "Mensaje: " . ($message ?: '-') . "\n";
-        $mailBody .= "Consent contacto: " . ($consentContact ? 'Sí' : 'No') . "\n";
-        $mailBody .= "Consent privacidad: " . ($consentPrivacy ? 'Sí' : 'No') . "\n";
+        $mailBody .= "Profile: " . ($profile ?: '-') . "\n";
+        $mailBody .= "Message: " . ($message ?: '-') . "\n";
+        $mailBody .= "Contact consent: " . ($consentContact ? 'Yes' : 'No') . "\n";
+        $mailBody .= "Privacy consent: " . ($consentPrivacy ? 'Yes' : 'No') . "\n";
 
         try {
             sendSmtpMail($smtpConfig, $subject, $mailBody, $smtpConfig['to'], $smtpConfig['from']);

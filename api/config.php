@@ -120,10 +120,33 @@ function normalizeBoolean($value): bool
 
     if (is_string($value)) {
         $v = strtolower(trim($value));
-        return in_array($v, ['1', 'true', 'yes', 'ja', 'on'], true);
+        return in_array($v, ['1', 'true', 'yes', 'ja', 'on', 'checked'], true);
     }
 
     return (bool) $value;
+}
+
+function readFieldValue(array $body, array $keys): mixed
+{
+    foreach ($keys as $key) {
+        if (array_key_exists($key, $body)) {
+            return $body[$key];
+        }
+    }
+
+    $normalizedKeys = [];
+    foreach ($keys as $key) {
+        $normalizedKeys[] = strtolower(str_replace([' ', '-', '_'], '', (string) $key));
+    }
+
+    foreach ($body as $formKey => $value) {
+        $normalizedFormKey = strtolower(str_replace([' ', '-', '_'], '', (string) $formKey));
+        if (in_array($normalizedFormKey, $normalizedKeys, true)) {
+            return $value;
+        }
+    }
+
+    return null;
 }
 
 function safeTrim($value): ?string
