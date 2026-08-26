@@ -207,7 +207,7 @@ function ensureDatabaseAndTable(): void
             `message` TEXT DEFAULT NULL,
             `consent_contact` TINYINT(1) NOT NULL DEFAULT 0,
             `consent_privacy` TINYINT(1) NOT NULL DEFAULT 0,
-            `raw_payload` JSON DEFAULT NULL,
+            `raw_payload` LONGTEXT DEFAULT NULL,
             `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             KEY `idx_source` (`source`),
