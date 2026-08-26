@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    writeAppLog('Invalid HTTP method received.', ['method' => $_SERVER['REQUEST_METHOD'] ?? null, 'uri' => $_SERVER['REQUEST_URI'] ?? null]);
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Only POST allowed.']);
     exit;
@@ -19,8 +20,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     $body = $_POST;
+    writeAppLog('Form submission started.', [
+        'method' => $_SERVER['REQUEST_METHOD'] ?? null,
+        'uri' => $_SERVER['REQUEST_URI'] ?? null,
+        'keys' => array_keys($body),
+        'source' => normalizeSource($body, $_SERVER),
+    ]);
+
     $email = safeTrim($body['email'] ?? $body['E-Mail'] ?? null);
     if ($email === null || $email === '') {
+        writeAppLog('Email validation failed for form submission.', ['body' => $body]);
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'E-Mail is required.']);
         exit;
@@ -48,6 +57,7 @@ try {
     try {
         $pdo = dbConnect();
     } catch (Throwable $e) {
+        writeAppLog('Database connection failed.', ['error' => $e->getMessage()]);
         http_response_code(500);
         echo json_encode([
             'success' => false,
@@ -141,7 +151,9 @@ try {
 
         try {
             sendSmtpMail($smtpConfig, $subject, $mailBody, $smtpConfig['to'], $smtpConfig['from']);
+            writeAppLog('SMTP email sent successfully.', ['id' => $id, 'to' => $smtpConfig['to'], 'subject' => $subject]);
         } catch (Throwable $mailError) {
+            writeAppLog('SMTP email failed.', ['id' => $id, 'error' => $mailError->getMessage(), 'to' => $smtpConfig['to']]);
             http_response_code(201);
             echo json_encode([
                 'success' => true,
@@ -153,6 +165,8 @@ try {
         }
     }
 
+    writeAppLog('Form saved successfully.', ['id' => $id, 'source' => $source, 'email' => $email]);
+
     echo json_encode([
         'success' => true,
         'message' => 'Form submitted successfully.',
@@ -160,6 +174,7 @@ try {
     ]);
     exit;
 } catch (Throwable $e) {
+    writeAppLog('Unexpected server error.', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
     http_response_code(500);
     echo json_encode([
         'success' => false,

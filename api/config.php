@@ -38,6 +38,43 @@ function envBool(string $key, bool $default = false): bool
     return in_array(strtolower((string) $value), ['1', 'true', 'yes', 'on', 'y'], true);
 }
 
+function loggingEnabled(): bool
+{
+    $appEnv = strtolower((string) env('APP_ENV', ''));
+    return $appEnv === 'test' || envBool('LOG_TO_FILE', false);
+}
+
+function appLogPath(): string
+{
+    $configuredPath = trim((string) env('LOG_PATH', ''));
+    if ($configuredPath !== '') {
+        return $configuredPath[0] === '/' ? $configuredPath : dirname(__DIR__) . '/' . $configuredPath;
+    }
+
+    return dirname(__DIR__) . '/logs/app.log';
+}
+
+function writeAppLog(string $message, array $context = []): void
+{
+    if (!loggingEnabled()) {
+        return;
+    }
+
+    $logPath = appLogPath();
+    $directory = dirname($logPath);
+    if (!is_dir($directory) && !@mkdir($directory, 0777, true) && !is_dir($directory)) {
+        return;
+    }
+
+    $entry = [
+        'time' => date('c'),
+        'message' => $message,
+        'context' => $context,
+    ];
+
+    @file_put_contents($logPath, json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR) . PHP_EOL, FILE_APPEND | LOCK_EX);
+}
+
 function dbDsn(): string
 {
     $host = env('DB_HOST', 'localhost');
@@ -128,6 +165,13 @@ function ensureDatabaseAndTable(): void
     $pass = dbPassword();
     $safeDb = preg_replace('/[^A-Za-z0-9_]/', '', $dbName) ?: 'aiesec_leads';
 
+    writeAppLog('Ensuring database and table exist.', [
+        'host' => $host,
+        'port' => $port,
+        'database' => $dbName,
+        'safe_database' => $safeDb,
+    ]);
+
     $baseDsn = sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $host, $port);
     $base = new PDO($baseDsn, $user, $pass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -170,6 +214,9 @@ function ensureDatabaseAndTable(): void
             KEY `idx_email` (`email`),
             KEY `idx_created_at` (`created_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        writeAppLog('Table form_submissions created.', ['database' => $safeDb]);
+    } else {
+        writeAppLog('Table form_submissions already exists.', ['database' => $safeDb]);
     }
 }
 
