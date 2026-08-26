@@ -195,7 +195,7 @@ function normaliseWebsite() {
   websiteField.value = (v && WEBSITE_RE.test(v) && !/^https?:\/\//i.test(v)) ? 'https://' + v : v;
 }
 
-/* ── Contact form (Web3Forms) ── */
+/* ── Contact form submission to local backend ── */
 const form = document.getElementById('contactForm');
 const submitBtn = document.getElementById('submitBtn');
 const formSuccess = document.getElementById('formSuccess');
@@ -207,18 +207,21 @@ if (form) {
     submitBtn.textContent = 'Wird gesendet...';
     submitBtn.disabled = true;
     try {
-      const res = await fetch('https://api.web3forms.com/submit', {
+      const res = await fetch('/api/forms.php', {
         method: 'POST',
         body: new FormData(form)
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         formSuccess.classList.add('visible');
         form.reset();
         submitBtn.textContent = '✓ Erfolgreich gesendet!';
         submitBtn.style.background = '#00C49A';
-      } else throw new Error('Failed');
-    } catch {
+      } else {
+        throw new Error(data.message || 'Failed');
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
       submitBtn.textContent = 'Fehler – bitte erneut versuchen';
       submitBtn.disabled = false;
       setTimeout(() => {

@@ -3,6 +3,9 @@
 Thumbs.db
 desktop.ini
 .claude/
+.env
+.env.*
+node_modules/
 
 # Temp / QA scratch
 _ref_tmp/
