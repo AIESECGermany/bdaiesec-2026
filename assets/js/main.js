@@ -2,8 +2,25 @@
 
 const ANALYTICS_COOKIE_NAME = 'aiesec_analytics';
 const COOKIE_CONSENT_KEY = 'aiesec_cookie_consent';
+const CAMPAIGN_STORAGE_KEY = 'aiesec_campaign_params';
 const ANALYTICS_COOKIE_TTL = 180 * 24 * 60 * 60;
 const CAMPAIGN_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid', 'msclkid'];
+
+function getPersistedCampaignParams() {
+  const current = new URLSearchParams(window.location.search);
+  const currentString = current.toString();
+  if (currentString) {
+    try { sessionStorage.setItem(CAMPAIGN_STORAGE_KEY, currentString); } catch (error) {}
+    return current;
+  }
+
+  try {
+    const stored = sessionStorage.getItem(CAMPAIGN_STORAGE_KEY);
+    if (stored) return new URLSearchParams(stored);
+  } catch (error) {}
+
+  return new URLSearchParams();
+}
 
 function hasCookieConsent() {
   try {
@@ -54,7 +71,7 @@ function showCookieBanner() {
 }
 
 function getCurrentCampaignParams() {
-  const params = new URLSearchParams(window.location.search);
+  const params = getPersistedCampaignParams();
   const values = {};
   CAMPAIGN_KEYS.forEach(key => {
     const value = params.get(key);
@@ -79,8 +96,9 @@ function setAnalyticsCookie(values = {}) {
 }
 
 function appendCampaignParamsToInternalLinks() {
-  const search = window.location.search;
-  if (!search || !search.includes('utm_') && !search.includes('gclid') && !search.includes('fbclid') && !search.includes('msclkid')) {
+  const current = getPersistedCampaignParams();
+  const search = current.toString();
+  if (!search) {
     return;
   }
 
@@ -94,7 +112,6 @@ function appendCampaignParamsToInternalLinks() {
       const url = new URL(href, window.location.href);
       if (url.origin !== window.location.origin) return;
       const params = new URLSearchParams(url.search);
-      const current = new URLSearchParams(search);
       current.forEach((value, key) => {
         if (!params.has(key)) params.set(key, value);
       });
