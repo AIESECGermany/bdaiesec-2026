@@ -268,6 +268,50 @@ function ensureDatabaseAndTable(): void
         writeAppLog('Table form_submissions created.', ['database' => $safeDb]);
     } else {
         writeAppLog('Table form_submissions already exists.', ['database' => $safeDb]);
+
+        $requiredColumns = [
+            'source' => 'VARCHAR(255) NOT NULL',
+            'company' => 'VARCHAR(255) DEFAULT NULL',
+            'website' => 'VARCHAR(255) DEFAULT NULL',
+            'first_name' => 'VARCHAR(255) DEFAULT NULL',
+            'last_name' => 'VARCHAR(255) DEFAULT NULL',
+            'full_name' => 'VARCHAR(255) DEFAULT NULL',
+            'email' => 'VARCHAR(255) NOT NULL',
+            'phone' => 'VARCHAR(255) DEFAULT NULL',
+            'product_interest' => 'VARCHAR(255) DEFAULT NULL',
+            'city' => 'VARCHAR(255) DEFAULT NULL',
+            'source_channel' => 'VARCHAR(255) DEFAULT NULL',
+            'interest' => 'VARCHAR(255) DEFAULT NULL',
+            'profile' => 'VARCHAR(255) DEFAULT NULL',
+            'message' => 'TEXT DEFAULT NULL',
+            'social_source' => 'VARCHAR(255) DEFAULT NULL',
+            'referrer_url' => 'TEXT DEFAULT NULL',
+            'landing_url' => 'TEXT DEFAULT NULL',
+            'utm_source' => 'VARCHAR(255) DEFAULT NULL',
+            'utm_medium' => 'VARCHAR(255) DEFAULT NULL',
+            'utm_campaign' => 'VARCHAR(255) DEFAULT NULL',
+            'utm_content' => 'VARCHAR(255) DEFAULT NULL',
+            'utm_term' => 'VARCHAR(255) DEFAULT NULL',
+            'campaign_params' => 'TEXT DEFAULT NULL',
+            'consent_contact' => 'TINYINT(1) NOT NULL DEFAULT 0',
+            'consent_privacy' => 'TINYINT(1) NOT NULL DEFAULT 0',
+            'raw_payload' => 'LONGTEXT DEFAULT NULL',
+            'created_at' => 'TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP',
+        ];
+
+        $existingColumns = [];
+        foreach ($pdo->query('SHOW COLUMNS FROM `form_submissions`') as $column) {
+            $existingColumns[$column['Field']] = true;
+        }
+
+        foreach ($requiredColumns as $column => $definition) {
+            if (isset($existingColumns[$column])) {
+                continue;
+            }
+
+            $pdo->exec(sprintf('ALTER TABLE `form_submissions` ADD COLUMN `%s` %s', $column, $definition));
+            writeAppLog('Added missing column to form_submissions.', ['database' => $safeDb, 'column' => $column]);
+        }
     }
 }
 
