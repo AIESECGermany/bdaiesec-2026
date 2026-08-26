@@ -1,8 +1,57 @@
 /* AIESEC in Deutschland — main.js */
 
 const ANALYTICS_COOKIE_NAME = 'aiesec_analytics';
+const COOKIE_CONSENT_KEY = 'aiesec_cookie_consent';
 const ANALYTICS_COOKIE_TTL = 180 * 24 * 60 * 60;
 const CAMPAIGN_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid', 'msclkid'];
+
+function hasCookieConsent() {
+  try {
+    return localStorage.getItem(COOKIE_CONSENT_KEY) === 'accepted';
+  } catch (error) {
+    return false;
+  }
+}
+
+function setCookieConsent(value) {
+  try {
+    localStorage.setItem(COOKIE_CONSENT_KEY, value);
+  } catch (error) {}
+}
+
+function showCookieBanner() {
+  if (hasCookieConsent()) return;
+
+  const existing = document.querySelector('.cookie-banner');
+  if (existing) return;
+
+  const banner = document.createElement('div');
+  banner.className = 'cookie-banner';
+  banner.innerHTML = `
+    <div class="cookie-banner__text">
+      Wir verwenden Cookies, um die Website zu verbessern und Analyse-Tracking nur mit Ihrer Zustimmung zu aktivieren. Mehr dazu in unserer
+      <a href="https://aiesec.de/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.
+    </div>
+    <div class="cookie-banner__actions">
+      <button type="button" class="cookie-banner__btn cookie-banner__btn--secondary" data-cookie-choice="decline">Nur notwendige</button>
+      <button type="button" class="cookie-banner__btn cookie-banner__btn--primary" data-cookie-choice="accept">Akzeptieren</button>
+    </div>
+  `;
+
+  banner.querySelectorAll('[data-cookie-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const choice = btn.dataset.cookieChoice;
+      const accepted = choice === 'accept';
+      setCookieConsent(accepted ? 'accepted' : 'declined');
+      banner.remove();
+      if (accepted) {
+        setAnalyticsCookie();
+      }
+    });
+  });
+
+  document.body.appendChild(banner);
+}
 
 function getCurrentCampaignParams() {
   const params = new URLSearchParams(window.location.search);
@@ -86,7 +135,10 @@ function ensureTrackingFields(form) {
   });
 }
 
-setAnalyticsCookie();
+if (hasCookieConsent()) {
+  setAnalyticsCookie();
+}
+showCookieBanner();
 appendCampaignParamsToInternalLinks();
 
 /* ── Smooth scroll for ALL anchor links ── */
