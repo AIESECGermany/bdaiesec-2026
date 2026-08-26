@@ -36,6 +36,7 @@ try {
     }
 
     $source = normalizeSource($body, $_SERVER);
+    $campaignContext = normalizeCampaignContext($body, $_SERVER);
     $company = safeTrim($body['company'] ?? $body['Unternehmen'] ?? null);
     $website = safeTrim($body['website'] ?? $body['Website'] ?? null);
     $firstName = safeTrim($body['first_name'] ?? $body['Vorname'] ?? $body['firstname'] ?? null);
@@ -82,6 +83,15 @@ try {
         interest,
         profile,
         message,
+        social_source,
+        referrer_url,
+        landing_url,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        utm_content,
+        utm_term,
+        campaign_params,
         consent_contact,
         consent_privacy,
         raw_payload,
@@ -101,6 +111,15 @@ try {
         :interest,
         :profile,
         :message,
+        :social_source,
+        :referrer_url,
+        :landing_url,
+        :utm_source,
+        :utm_medium,
+        :utm_campaign,
+        :utm_content,
+        :utm_term,
+        :campaign_params,
         :consent_contact,
         :consent_privacy,
         :raw_payload,
@@ -123,9 +142,18 @@ try {
         ':interest' => $interest,
         ':profile' => $profile,
         ':message' => $message,
+        ':social_source' => $campaignContext['social_source'],
+        ':referrer_url' => $campaignContext['referrer_url'],
+        ':landing_url' => $campaignContext['landing_url'],
+        ':utm_source' => $campaignContext['utm_source'],
+        ':utm_medium' => $campaignContext['utm_medium'],
+        ':utm_campaign' => $campaignContext['utm_campaign'],
+        ':utm_content' => $campaignContext['utm_content'],
+        ':utm_term' => $campaignContext['utm_term'],
+        ':campaign_params' => $campaignContext['campaign_params'],
         ':consent_contact' => $consentContact ? 1 : 0,
         ':consent_privacy' => $consentPrivacy ? 1 : 0,
-        ':raw_payload' => json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ':raw_payload' => json_encode($body + ['campaign_context' => $campaignContext], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
     ]);
 
     $id = (int) $pdo->lastInsertId();
@@ -144,6 +172,12 @@ try {
         $mailBody .= "Ciudad: " . ($city ?: '-') . "\n";
         $mailBody .= "Cómo nos encontró: " . ($sourceChannel ?: '-') . "\n";
         $mailBody .= "Website: " . ($website ?: '-') . "\n";
+        $mailBody .= "Referrer URL: " . ($campaignContext['referrer_url'] ?: '-') . "\n";
+        $mailBody .= "Landing URL: " . ($campaignContext['landing_url'] ?: '-') . "\n";
+        $mailBody .= "UTM source: " . ($campaignContext['utm_source'] ?: '-') . "\n";
+        $mailBody .= "UTM medium: " . ($campaignContext['utm_medium'] ?: '-') . "\n";
+        $mailBody .= "UTM campaign: " . ($campaignContext['utm_campaign'] ?: '-') . "\n";
+        $mailBody .= "Campaign params: " . ($campaignContext['campaign_params'] !== '' ? $campaignContext['campaign_params'] : '-') . "\n";
         $mailBody .= "Perfil: " . ($profile ?: '-') . "\n";
         $mailBody .= "Mensaje: " . ($message ?: '-') . "\n";
         $mailBody .= "Consent contacto: " . ($consentContact ? 'Sí' : 'No') . "\n";

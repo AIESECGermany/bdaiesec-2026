@@ -1,5 +1,94 @@
 /* AIESEC in Deutschland — main.js */
 
+const ANALYTICS_COOKIE_NAME = 'aiesec_analytics';
+const ANALYTICS_COOKIE_TTL = 180 * 24 * 60 * 60;
+const CAMPAIGN_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid', 'msclkid'];
+
+function getCurrentCampaignParams() {
+  const params = new URLSearchParams(window.location.search);
+  const values = {};
+  CAMPAIGN_KEYS.forEach(key => {
+    const value = params.get(key);
+    if (value) values[key] = value;
+  });
+  return values;
+}
+
+function setAnalyticsCookie(values = {}) {
+  const currentParams = getCurrentCampaignParams();
+  const payload = {
+    landing_url: window.location.href,
+    referrer_url: document.referrer || '',
+    utm: currentParams,
+    path: window.location.pathname,
+    updated_at: new Date().toISOString(),
+    ...values
+  };
+  const expires = new Date(Date.now() + ANALYTICS_COOKIE_TTL * 1000).toUTCString();
+  document.cookie = `${ANALYTICS_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(payload))}; expires=${expires}; path=/; SameSite=Lax`;
+  try { sessionStorage.setItem(ANALYTICS_COOKIE_NAME, JSON.stringify(payload)); } catch (error) {}
+}
+
+function appendCampaignParamsToInternalLinks() {
+  const search = window.location.search;
+  if (!search || !search.includes('utm_') && !search.includes('gclid') && !search.includes('fbclid') && !search.includes('msclkid')) {
+    return;
+  }
+
+  document.querySelectorAll('a[href]').forEach((link) => {
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+      return;
+    }
+
+    try {
+      const url = new URL(href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      const params = new URLSearchParams(url.search);
+      const current = new URLSearchParams(search);
+      current.forEach((value, key) => {
+        if (!params.has(key)) params.set(key, value);
+      });
+      url.search = params.toString();
+      link.setAttribute('href', url.pathname + (url.search ? url.search : '') + url.hash);
+    } catch (error) {
+      // ignore malformed links
+    }
+  });
+}
+
+function ensureTrackingFields(form) {
+  if (!form) return;
+  const tracking = {
+    referrer_url: document.referrer || window.location.origin,
+    landing_url: window.location.href,
+    campaign_params: window.location.search.replace(/^\?/, ''),
+    social_source: getCurrentCampaignParams().utm_source || '',
+    utm_source: getCurrentCampaignParams().utm_source || '',
+    utm_medium: getCurrentCampaignParams().utm_medium || '',
+    utm_campaign: getCurrentCampaignParams().utm_campaign || '',
+    utm_content: getCurrentCampaignParams().utm_content || '',
+    utm_term: getCurrentCampaignParams().utm_term || '',
+    gclid: getCurrentCampaignParams().gclid || '',
+    fbclid: getCurrentCampaignParams().fbclid || '',
+    msclkid: getCurrentCampaignParams().msclkid || ''
+  };
+
+  Object.entries(tracking).forEach(([name, value]) => {
+    let field = form.querySelector(`input[name="${name}"]`);
+    if (!field) {
+      field = document.createElement('input');
+      field.type = 'hidden';
+      field.name = name;
+      form.appendChild(field);
+    }
+    field.value = value || '';
+  });
+}
+
+setAnalyticsCookie();
+appendCampaignParamsToInternalLinks();
+
 /* ── Smooth scroll for ALL anchor links ── */
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', function (e) {
@@ -200,12 +289,16 @@ const form = document.getElementById('contactForm');
 const submitBtn = document.getElementById('submitBtn');
 const formSuccess = document.getElementById('formSuccess');
 if (form) {
+  ensureTrackingFields(form);
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    ensureTrackingFields(form);
     normaliseWebsite();
-    const original = submitBtn.innerHTML;
-    submitBtn.textContent = 'Wird gesendet...';
-    submitBtn.disabled = true;
+    const original = submitBtn && submitBtn.innerHTML;
+    if (submitBtn) {
+      submitBtn.textContent = 'Wird gesendet...';
+      submitBtn.disabled = true;
+    }
     try {
       const res = await fetch('/api/forms.php', {
         method: 'POST',
@@ -213,21 +306,25 @@ if (form) {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        formSuccess.classList.add('visible');
+        if (formSuccess) formSuccess.classList.add('visible');
         form.reset();
-        submitBtn.textContent = '✓ Erfolgreich gesendet!';
-        submitBtn.style.background = '#00C49A';
+        if (submitBtn) {
+          submitBtn.textContent = '✓ Erfolgreich gesendet!';
+          submitBtn.style.background = '#00C49A';
+        }
       } else {
         throw new Error(data.message || 'Failed');
       }
     } catch (error) {
       console.error('Form submission error:', error);
-      submitBtn.textContent = 'Fehler – bitte erneut versuchen';
-      submitBtn.disabled = false;
-      setTimeout(() => {
-        submitBtn.innerHTML = original;
+      if (submitBtn) {
+        submitBtn.textContent = 'Fehler – bitte erneut versuchen';
         submitBtn.disabled = false;
-      }, 3000);
+        setTimeout(() => {
+          submitBtn.innerHTML = original;
+          submitBtn.disabled = false;
+        }, 3000);
+      }
     }
   });
 }

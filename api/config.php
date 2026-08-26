@@ -156,6 +156,47 @@ function normalizeSource(array $body, array $server): string
     return 'website';
 }
 
+function normalizeCampaignContext(array $body, array $server): array
+{
+    $referrerUrl = safeTrim($body['referrer_url'] ?? $body['referrer'] ?? $body['referer_url'] ?? $server['HTTP_REFERER'] ?? null);
+    $landingUrl = safeTrim($body['landing_url'] ?? $body['landingUrl'] ?? null);
+    if ($landingUrl === null || $landingUrl === '') {
+        $landingUrl = (($server['HTTPS'] ?? 'off') === 'on' ? 'https://' : 'http://') . ($server['HTTP_HOST'] ?? 'localhost') . ($server['REQUEST_URI'] ?? '/');
+    }
+
+    $queryString = $body['campaign_params'] ?? $body['utm_params'] ?? $body['query_params'] ?? null;
+    $params = [];
+    if (is_string($queryString) && $queryString !== '') {
+        parse_str($queryString, $params);
+    }
+
+    $currentQuery = $server['QUERY_STRING'] ?? '';
+    if ($currentQuery !== '' && empty($params)) {
+        parse_str($currentQuery, $params);
+    }
+
+    foreach (['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid', 'msclkid'] as $key) {
+        if (!isset($params[$key])) {
+            $params[$key] = safeTrim($body[$key] ?? null) ?? '';
+        }
+    }
+
+    $params = array_filter($params, static fn ($value) => $value !== null && $value !== '');
+    $campaignParams = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+
+    return [
+        'referrer_url' => $referrerUrl,
+        'landing_url' => $landingUrl,
+        'campaign_params' => $campaignParams,
+        'utm_source' => safeTrim($body['utm_source'] ?? $params['utm_source'] ?? null),
+        'utm_medium' => safeTrim($body['utm_medium'] ?? $params['utm_medium'] ?? null),
+        'utm_campaign' => safeTrim($body['utm_campaign'] ?? $params['utm_campaign'] ?? null),
+        'utm_content' => safeTrim($body['utm_content'] ?? $params['utm_content'] ?? null),
+        'utm_term' => safeTrim($body['utm_term'] ?? $params['utm_term'] ?? null),
+        'social_source' => safeTrim($body['social'] ?? $body['social_source'] ?? $body['source_social'] ?? $params['utm_source'] ?? null),
+    ];
+}
+
 function ensureDatabaseAndTable(): void
 {
     $host = env('DB_HOST', 'localhost');
@@ -205,12 +246,22 @@ function ensureDatabaseAndTable(): void
             `interest` VARCHAR(255) DEFAULT NULL,
             `profile` VARCHAR(255) DEFAULT NULL,
             `message` TEXT DEFAULT NULL,
+            `social_source` VARCHAR(255) DEFAULT NULL,
+            `referrer_url` TEXT DEFAULT NULL,
+            `landing_url` TEXT DEFAULT NULL,
+            `utm_source` VARCHAR(255) DEFAULT NULL,
+            `utm_medium` VARCHAR(255) DEFAULT NULL,
+            `utm_campaign` VARCHAR(255) DEFAULT NULL,
+            `utm_content` VARCHAR(255) DEFAULT NULL,
+            `utm_term` VARCHAR(255) DEFAULT NULL,
+            `campaign_params` TEXT DEFAULT NULL,
             `consent_contact` TINYINT(1) NOT NULL DEFAULT 0,
             `consent_privacy` TINYINT(1) NOT NULL DEFAULT 0,
             `raw_payload` LONGTEXT DEFAULT NULL,
             `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             KEY `idx_source` (`source`),
+            KEY `idx_campaign` (`utm_campaign`),
             KEY `idx_email` (`email`),
             KEY `idx_created_at` (`created_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -249,7 +300,12 @@ function sendSmtpMail(array $config, string $subject, string $body, string $to, 
         return false;
     }
 
-    $socket = fsockopen($secure ? 'tls://' . $host : $host, $port, $errno, $errstr, 20);
+    $connectionHost = $host;
+    if ($secure && (int) $port === 465) {
+        $connectionHost = 'ssl://' . $host;
+    }
+
+    $socket = fsockopen($connectionHost, $port, $errno, $errstr, 20);
     if ($socket === false) {
         throw new RuntimeException('SMTP connection failed: ' . $errstr);
     }
@@ -264,8 +320,13 @@ function sendSmtpMail(array $config, string $subject, string $body, string $to, 
                 break;
             }
             $response .= $line;
-            if (preg_match('/\r\n$/', $line) === 1) {
+
+            if (preg_match('/^\d{3} /', $line) === 1) {
                 break;
+            }
+
+            if (preg_match('/^\d{3}-/', $line) === 1) {
+                continue;
             }
         }
         return $response;
@@ -313,7 +374,12 @@ function sendSmtpMail(array $config, string $subject, string $body, string $to, 
         throw new RuntimeException('SMTP password rejected: ' . trim($resp));
     }
 
-    $write('MAIL FROM:<' . $from . '>');
+    $mailFrom = $from;
+    if (preg_match('/<([^>]+)>/', $from, $matches)) {
+        $mailFrom = $matches[1];
+    }
+
+    $write('MAIL FROM:<' . $mailFrom . '>');
     $resp = $read();
     if (strpos($resp, '250') !== 0) {
         throw new RuntimeException('MAIL FROM failed: ' . trim($resp));
