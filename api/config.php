@@ -119,8 +119,64 @@ function normalizeSource(array $body, array $server): string
     return 'website';
 }
 
+function ensureDatabaseAndTable(): void
+{
+    $host = env('DB_HOST', 'localhost');
+    $port = env('DB_PORT', '3306');
+    $dbName = trim((string) env('DB_NAME', 'aiesec_leads'));
+    $user = dbUser();
+    $pass = dbPassword();
+    $safeDb = preg_replace('/[^A-Za-z0-9_]/', '', $dbName) ?: 'aiesec_leads';
+
+    $baseDsn = sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $host, $port);
+    $base = new PDO($baseDsn, $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ]);
+
+    $base->exec(sprintf('CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci', $safeDb));
+
+    $pdo = new PDO(sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $safeDb), $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ]);
+
+    $stmt = $pdo->query("SHOW TABLES LIKE 'form_submissions'");
+    if ($stmt->fetch() === false) {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `form_submissions` (
+            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `source` VARCHAR(255) NOT NULL,
+            `company` VARCHAR(255) DEFAULT NULL,
+            `website` VARCHAR(255) DEFAULT NULL,
+            `first_name` VARCHAR(255) DEFAULT NULL,
+            `last_name` VARCHAR(255) DEFAULT NULL,
+            `full_name` VARCHAR(255) DEFAULT NULL,
+            `email` VARCHAR(255) NOT NULL,
+            `phone` VARCHAR(255) DEFAULT NULL,
+            `product_interest` VARCHAR(255) DEFAULT NULL,
+            `city` VARCHAR(255) DEFAULT NULL,
+            `source_channel` VARCHAR(255) DEFAULT NULL,
+            `interest` VARCHAR(255) DEFAULT NULL,
+            `profile` VARCHAR(255) DEFAULT NULL,
+            `message` TEXT DEFAULT NULL,
+            `consent_contact` TINYINT(1) NOT NULL DEFAULT 0,
+            `consent_privacy` TINYINT(1) NOT NULL DEFAULT 0,
+            `raw_payload` JSON DEFAULT NULL,
+            `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `idx_source` (`source`),
+            KEY `idx_email` (`email`),
+            KEY `idx_created_at` (`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    }
+}
+
 function dbConnect(): PDO
 {
+    ensureDatabaseAndTable();
+
     $dsn = dbDsn();
     $user = dbUser();
     $pass = dbPassword();
