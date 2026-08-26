@@ -1,0 +1,20 @@
+RewriteEngine On
+Options -MultiViews
+
+# Allow real files and directories to pass through
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Clean URLs for the main page routes
+RewriteRule ^$ /index.html [L]
+RewriteRule ^index/?$ /index.html [L]
+RewriteRule ^anmeldung/?$ /anmeldung.html [L]
+RewriteRule ^global-talent/?$ /global-talent/index.html [L]
+RewriteRule ^hochschulmarketing/?$ /hochschulmarketing/index.html [L]
+RewriteRule ^talentbindung/?$ /talentbindung/index.html [L]
+RewriteRule ^coming-soon/?$ /coming-soon.html [L]
+
+# Optional canonical redirect from .html URLs to clean URLs
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.html\s [NC]
+RewriteRule ^ /%1 [R=301,L,NE]
