@@ -838,3 +838,41 @@ select:focus-visible,textarea:focus-visible{
   animation:heroGlint 2.4s cubic-bezier(.2,.7,.2,1) 1.35s 1 both}
 @keyframes heroGlint{to{transform:translateX(130%)}}
 @media(prefers-reduced-motion:reduce){.hero-title::after{display:none}}
+
+/* ════════════ MOBILE PERFORMANCE LAYER ════════════
+   Phones and tablets pay a real GPU/battery cost for the desktop polish layer:
+   full-screen blend overlays, blur(72px) auroras and a handful of `infinite`
+   animations that never stop, on-screen or not. On a small screen almost none
+   of it is visible anyway, so it is switched off below 900px / on touch.
+   Desktop is untouched. Keep any new decorative effect out of this block only
+   if it is cheap (plain transform/opacity on a small element). */
+@media (max-width:900px), (hover:none) and (pointer:coarse){
+
+  /* 1. Full-viewport blend layers — the most expensive things on the page.
+        Each forces every frame through an extra compositing pass. */
+  .grain-overlay{display:none}
+  .hero-aurora{display:none}
+  .hero-title::after{display:none}          /* one-pass glint, fires during load */
+
+  /* 2. Hero image: no 30s Ken Burns, and no 1.5s blur-in.
+        The blur-in delays the largest paint on exactly the devices that can
+        least afford it, so the photo is simply shown at its final state. */
+  .hero-bg{animation:none;scale:1.08;will-change:auto;filter:none}
+
+  /* 3. backdrop-filter repaints on every scroll frame. Opaque backgrounds
+        instead — visually near-identical over these surfaces. */
+  .navbar{background:rgba(255,255,255,.95);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .navbar.scrolled{background:rgba(255,255,255,.97)}
+  .hero-tag{background:rgba(255,255,255,.16);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .pill{background:rgba(255,255,255,.15);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .event-label{backdrop-filter:none;-webkit-backdrop-filter:none}
+
+  /* 4. Animations that run forever regardless of what is on screen. */
+  .about-deco-tl,.about-deco-br{animation:none}
+  .testimonial,.testimonial::after{animation:none}
+  .footer-credit .footer-heart{animation:none}
+  .coming-soon::before,.coming-soon::after{animation:none;filter:blur(40px)}
+
+  /* 5. Drop permanent layer promotion — `will-change` costs memory even idle. */
+  .hero-aurora::before,.hero-aurora::after,.btn{will-change:auto}
+}

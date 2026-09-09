@@ -125,6 +125,13 @@ function appendCampaignParamsToInternalLinks() {
 
 function ensureTrackingFields(form) {
   if (!form) return;
+  /* Referrer, landing URL and campaign parameters are analytics data, so they
+     are only attached once the visitor has actually accepted. Without consent
+     any previously written values are blanked out rather than left behind. */
+  if (!hasCookieConsent()) {
+    form.querySelectorAll('input[type="hidden"][data-tracking]').forEach(f => { f.value = ''; });
+    return;
+  }
   const tracking = {
     referrer_url: document.referrer || window.location.origin,
     landing_url: window.location.href,
@@ -146,6 +153,7 @@ function ensureTrackingFields(form) {
       field = document.createElement('input');
       field.type = 'hidden';
       field.name = name;
+      field.dataset.tracking = '1';
       form.appendChild(field);
     }
     field.value = value || '';
@@ -179,16 +187,39 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 /* ── Navbar scroll effect + scroll progress bar ── */
 const navbar = document.getElementById('navbar');
 const progress = document.getElementById('scrollProgress');
-function onScroll() {
+/* Reading scrollHeight forces the browser to re-measure the whole page, so it
+   must never happen inside a scroll event. The page height is cached and only
+   recomputed on resize / load; the paint itself is rAF-throttled. */
+let scrollRange = 0;
+let scrolledState = null;
+let scrollTicking = false;
+
+function measureScrollRange() {
+  scrollRange = document.documentElement.scrollHeight - window.innerHeight;
+}
+
+function paintScroll() {
   const y = window.scrollY;
-  navbar.classList.toggle('scrolled', y > 20);
+  const scrolled = y > 20;
+  if (scrolled !== scrolledState) {
+    navbar.classList.toggle('scrolled', scrolled);
+    scrolledState = scrolled;
+  }
   if (progress) {
-    const h = document.documentElement.scrollHeight - window.innerHeight;
-    progress.style.width = (h > 0 ? (y / h) * 100 : 0) + '%';
+    progress.style.width = (scrollRange > 0 ? (y / scrollRange) * 100 : 0) + '%';
   }
 }
-window.addEventListener('scroll', onScroll, { passive: true });
-onScroll();
+
+window.addEventListener('scroll', () => {
+  if (scrollTicking) return;
+  scrollTicking = true;
+  requestAnimationFrame(() => { paintScroll(); scrollTicking = false; });
+}, { passive: true });
+
+window.addEventListener('resize', () => { measureScrollRange(); paintScroll(); }, { passive: true });
+window.addEventListener('load', () => { measureScrollRange(); paintScroll(); });
+measureScrollRange();
+paintScroll();
 
 /* ── Hamburger menu ── */
 const hamburger = document.getElementById('hamburger');
@@ -425,7 +456,10 @@ document.querySelectorAll('.video-facade').forEach((el) => {
 /* ════════════ HIGH-END POLISH LAYER (additive) ════════════ */
 /* Film grain overlay (skipped for reduced-motion via CSS display:none too) */
 (() => {
-  if (reduceMotion) return;
+  /* Skipped on touch/small screens: a fixed full-viewport mix-blend-mode layer
+     costs a compositing pass every frame and is invisible on a phone anyway.
+     Keep in sync with the MOBILE PERFORMANCE LAYER block in style.css. */
+  if (reduceMotion || !finePointer) return;
   const grain = document.createElement('div');
   grain.className = 'grain-overlay';
   grain.setAttribute('aria-hidden', 'true');
