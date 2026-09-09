@@ -195,6 +195,41 @@ exposure — the LG München I ruling on embedded Google Fonts, Az. 3 O 17493/20
 - **Datenschutzerklärung** currently links to `aiesec.de/datenschutz`, which won't mention
   this site's form processor or host. Needs updating by whoever owns that page.
 
+## Performance (mobile-first)
+
+Measured on a 390px viewport, homepage, cold load: **2 972 KB -> 546 KB**.
+Desktop rendering is deliberately unchanged. Three conventions came out of it:
+
+- **Responsive images live in `assets/images/opt/`** as `<name>-<width>.webp`
+  plus a same-width `.jpg`/`.png` fallback. Every photo is wired as
+  `<picture><source type="image/webp" srcset sizes><img srcset sizes width height></picture>`.
+  The files in `assets/images/` are the masters - never reference them from a
+  page again, and never delete them. Regenerate with Pillow; there is no build step.
+- **`picture{display:contents}` + `picture > source{display:none}`** in `style.css`.
+  The first keeps the wrapper out of layout so the `<img>` stays the direct
+  grid/flex item and every existing rule keeps working. The second is mandatory:
+  without it `display:contents` lifts `<source>` into the grid, where it becomes
+  an invisible grid item and pushes the real photos out of place. (This actually
+  happened - the about-section thumbnails went diagonal.) For the same reason
+  `.about-photos-small > :last-child` replaced `.about-photos-small img:last-child`.
+- **`MOBILE PERFORMANCE LAYER`** at the end of `style.css`
+  (`max-width:900px, (hover:none) and (pointer:coarse)`) switches off the film
+  grain overlay, the `blur(72px)` hero aurora, all `backdrop-filter`s, the hero
+  Ken Burns + blur-in, the hero glint and four `infinite` animations. Phones pay
+  a real GPU/battery cost for effects a small screen can barely show.
+  **Any new decorative effect must be added to this block unless it is cheap**
+  (plain transform/opacity on a small element). `main.js` mirrors the same
+  breakpoint for the grain overlay - keep the two in sync.
+
+Also fixed: the scroll handler read `document.scrollHeight` on every scroll
+event, forcing a full-page relayout per frame; the height is now cached and the
+paint rAF-throttled. Hero images carry `fetchpriority="high"` (they are the LCP
+element). Event-card CSS backgrounds use `image-set()` with a `url()` fallback.
+
+**Known, pre-existing (not a regression):** the homepage overflows horizontally
+by 3px at 390px - verified identical before these changes. Cause is the hero
+`scale(1.08)` overscan plus a `.btn`. Worth a separate fix.
+
 ## DECISIONS (settled — do not relitigate)
 - **NEVER fabricate content.** No invented testimonials, customer names, quotes, logos, or
   statistics. Social proof must come from the owner (real, with permission) or not appear.
