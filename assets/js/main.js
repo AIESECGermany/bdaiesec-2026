@@ -459,7 +459,7 @@ document.querySelectorAll('.video-facade').forEach((el) => {
   /* Skipped on touch/small screens: a fixed full-viewport mix-blend-mode layer
      costs a compositing pass every frame and is invisible on a phone anyway.
      Keep in sync with the MOBILE PERFORMANCE LAYER block in style.css. */
-  if (reduceMotion || !finePointer) return;
+  if (reduceMotion || !finePointer || window.innerWidth < 900) return;
   const grain = document.createElement('div');
   grain.className = 'grain-overlay';
   grain.setAttribute('aria-hidden', 'true');

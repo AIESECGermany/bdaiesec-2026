@@ -65,6 +65,14 @@ body{
   font-feature-settings:"ss01","cv01","cv11";
 }
 img{max-width:100%;display:block}
+/* Responsive images are wrapped in <picture>. display:contents keeps the
+   wrapper out of layout entirely, so the <img> stays the direct grid/flex
+   item and every existing rule keeps working unchanged. */
+picture{display:contents}
+/* display:contents also lifts <source> out of the <picture>, where it would
+   otherwise become a grid/flex item and push the real image out of place.
+   <source> renders nothing, so hide it explicitly. */
+picture > source{display:none}
 a{text-decoration:none;color:inherit}
 ul{list-style:none}
 button{cursor:pointer;border:none;background:none;font-family:inherit}
@@ -710,7 +718,7 @@ select:focus-visible,textarea:focus-visible{
   .hero-pills{gap:.5rem}
   .pill{font-size:.76rem;padding:8px 14px}
   .hero-scroll-hint{display:none}
-  .about-photos-small img:last-child{display:none}
+  .about-photos-small > :last-child{display:none}  /* :last-child, not img: each img now sits in its own <picture> */
   .partners-logos{grid-template-columns:repeat(2,1fr)}
   .partnership-cards{grid-template-columns:1fr}
   .form-row{grid-template-columns:1fr}
