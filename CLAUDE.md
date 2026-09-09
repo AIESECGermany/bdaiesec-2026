@@ -10,11 +10,16 @@
 - Pure HTML + CSS + vanilla JS. No frameworks, no build step. Open files directly.
 - One shared stylesheet `assets/css/style.css`, one shared script `assets/js/main.js`.
   Sub-pages link them with `../` (e.g. `../assets/css/style.css`).
-- Host: GitHub Pages → `unternehmen.aiesec.de`.
-- **Forms: Web3Forms.** Access key `f0ba8c58-9857-47f0-b545-d6d283ebc418`.
-  Every contact form posts to `https://api.web3forms.com/submit` with that key,
-  a per-page `subject`, and (on sub-pages) a hidden `interest`/`profil` field so
-  leads are tagged by page. `main.js` intercepts submit → fetch → green success state.
+- **Host: nginx + Plesk at `unternehmen.aiesec.de`** (NOT GitHub Pages any more —
+  that changed when the PHP backend landed in Aug 2026). `.htaccess` is honored.
+  See "Backend / PHP" below before assuming anything about deploys.
+- **Forms: self-hosted PHP → MariaDB.** Every contact form posts to
+  `/api/forms.php`, which writes to the `form_submissions` table and optionally
+  sends an SMTP notification. A per-page hidden `source` field plus
+  `interest`/`profil` tag the lead. `main.js` intercepts submit → fetch → green
+  success state. **Web3Forms is gone** (key `f0ba8c58-…` is dead) — the DSGVO
+  concern about a third-party processor is resolved by this move.
+- Forms also carry a hidden honeypot `firma_fax` (see Backend open item 3).
 
 ## Design system (already built — reuse, don't reinvent)
 Defined in `assets/css/style.css`:
@@ -195,10 +200,73 @@ exposure — the LG München I ruling on embedded Google Fonts, Az. 3 O 17493/20
 - **Datenschutzerklärung** currently links to `aiesec.de/datenschutz`, which won't mention
   this site's form processor or host. Needs updating by whoever owns that page.
 
+## Backend / PHP - owned by the IT guy, NOT ours to change
+
+The site moved off GitHub Pages. It now runs on **nginx + Plesk** at
+unternehmen.aiesec.de, with a PHP form backend the IT guy added in Aug 2026
+(`api/forms.php`, `api/config.php`, MariaDB table `form_submissions`), replacing
+Web3Forms. `.htaccess` IS honored (clean URLs work), so server config is a lever
+we have; **PHP is not** - the owner's standing instruction is do not touch it.
+
+**Deploy:** no CI in the repo, but live `index.html` was byte-identical to the
+tip of `main`, so something syncs repo -> production (most likely Plesk's Git
+extension pulling on push). NOT CONFIRMED - ask before merging to main, because
+a merge may go live instantly with no staging.
+
+### Open items only the backend owner can fix
+Recorded here deliberately: the owner decided NOT to send these as a list,
+because it reads as auditing a colleague's work (see the memory note on
+diplomatic messages). Raise them one or two at a time, as questions, when they
+come up naturally. Ordered by how much they actually matter:
+
+1. `api/debug.php` is reachable over HTTP and prints DB host/name/user and SMTP
+   host/user/recipient to any visitor. We block it in `.htaccess`; deleting it
+   from the server is the real fix. **Most urgent.**
+2. `api/forms.php` sends `Access-Control-Allow-Origin: *` with no rate limit or
+   captcha - any site anywhere can POST unlimited leads into the DB.
+3. A honeypot field `firma_fax` is now in all 5 forms but is **inert** until the
+   backend rejects submissions where it is non-empty. One `if`.
+4. Error responses include `'debug' => $e->getMessage()`, leaking internal
+   paths, SQL and connection errors to the browser.
+5. Email is only checked for non-empty - no `filter_var(..., FILTER_VALIDATE_EMAIL)`.
+6. `dbConnect()` calls `ensureDatabaseAndTable()` on every submit, running
+   CREATE DATABASE / SHOW COLUMNS / ALTER TABLE per request - which forces the
+   live DB user to permanently hold CREATE and ALTER rights.
+7. Notification mail is sent synchronously inside the request over a hand-rolled
+   SMTP socket with a 20s timeout, so visitors wait on it before seeing "sent".
+8. Three overlapping backends/routers coexist: `server.js` (Node, silently drops
+   every UTM column), `deployer.php` (serves HTML as `text/plain`; confirmed NOT
+   in the live request path) and `.htaccess`. Two should go.
+9. `db/schema.sql` disagrees with the table `api/config.php` actually creates -
+   missing every UTM column, `raw_payload` typed JSON vs LONGTEXT.
+10. DSGVO: `raw_payload` stores a second full copy of every submission incl.
+    personal data, and the referrer is recorded server-side regardless of cookie
+    consent. Our JS consent gate only closes the client half of this.
+
 ## Performance (mobile-first)
 
-Measured on a 390px viewport, homepage, cold load: **2 972 KB -> 546 KB**.
-Desktop rendering is deliberately unchanged. Three conventions came out of it:
+Work done 2026-09-09 on branch `perf/mobile-optimization` (pushed, NOT merged).
+Desktop rendering is deliberately unchanged. Verified numbers:
+
+| | Before | After |
+|---|---|---|
+| Page transfer, 390px cold | 2 972 KB | **546 KB** |
+| Page transfer, 1440px cold | 3 221 KB | **800 KB** |
+| Lighthouse Performance (median of 3, mobile) | 44 | **67** |
+| Largest Contentful Paint | 7.95 s | **3.38 s** |
+| Time to Interactive | 8.39 s | **3.69 s** |
+| Total Blocking Time | 2 617 ms | **993 ms** |
+| Agentic Browsing / A11y / Best Prac. / SEO | 100 / 96 / 96 / 100 | unchanged |
+
+Speed Index and FCP came out flat (inside run-to-run noise). **Agentic Browsing
+already scores 100** — the audit shipped in Lighthouse 13.3.0 (May 2026) and PSI
+inherited it; plain semantic HTML passes it, so there is nothing to chase there.
+Re-run real PSI against the live URL after deploy for CrUX field data — the
+keyless PSI API is daily-quota-limited and cannot see an undeployed branch.
+`npx -y lighthouse@latest <url>` reproduces the table above; take a median of 3,
+single runs swing wildly (TBT ranged 260–2914 ms on the same build).
+
+Three conventions came out of it:
 
 - **Responsive images live in `assets/images/opt/`** as `<name>-<width>.webp`
   plus a same-width `.jpg`/`.png` fallback. Every photo is wired as
