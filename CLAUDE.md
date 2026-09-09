@@ -252,11 +252,16 @@ Desktop rendering is deliberately unchanged. Verified numbers:
 |---|---|---|
 | Page transfer, 390px cold | 2 972 KB | **546 KB** |
 | Page transfer, 1440px cold | 3 221 KB | **800 KB** |
-| Lighthouse Performance (median of 3, mobile) | 44 | **67** |
-| Largest Contentful Paint | 7.95 s | **3.38 s** |
-| Time to Interactive | 8.39 s | **3.69 s** |
-| Total Blocking Time | 2 617 ms | **993 ms** |
+| Lighthouse Performance, mobile preset (median of 3) | 44 | **67** |
+| &nbsp;&nbsp;LCP / TTI / TBT, mobile | 7.95 s / 8.39 s / 2 617 ms | **3.38 s / 3.69 s / 993 ms** |
+| Lighthouse Performance, desktop preset (median of 3) | 92 | **97** |
+| &nbsp;&nbsp;LCP / TTI / TBT, desktop | 1.42 s / 1.48 s / 130 ms | **0.87 s / 0.90 s / 103 ms** |
 | Agentic Browsing / A11y / Best Prac. / SEO | 100 / 96 / 96 / 100 | unchanged |
+
+**Not a mobile-only change.** Only the effects-stripping block is mobile-scoped
+(to preserve the desktop look on purpose). Images, compression, caching, the
+scroll fix, `width`/`height` and `fetchpriority` all help every device — desktop
+just had less headroom, starting at 92.
 
 Speed Index and FCP came out flat (inside run-to-run noise). **Agentic Browsing
 already scores 100** — the audit shipped in Lighthouse 13.3.0 (May 2026) and PSI
