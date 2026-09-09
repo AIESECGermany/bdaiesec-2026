@@ -18,3 +18,65 @@ RewriteRule ^coming-soon/?$ /coming-soon.html [L]
 # Optional canonical redirect from .html URLs to clean URLs
 RewriteCond %{THE_REQUEST} \s/+(.+?)\.html\s [NC]
 RewriteRule ^ /%1 [R=301,L,NE]
+
+# ============================================================
+# HARDENING - block files that must never be served publicly.
+# Nothing on the site links to any of these. api/debug.php stays
+# runnable from the command line; it is only blocked over HTTP.
+# Both Apache 2.4 and 2.2 syntax, so this cannot 500 the site.
+# ============================================================
+<FilesMatch "^(debug\.php|\.env.*|.*\.log|.*\.sql|composer\.(json|lock)|package(-lock)?\.json|server\.js|deployer\.php)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# Block the log and db directories outright
+RedirectMatch 404 ^/(logs|db|node_modules)(/|$)
+
+# Do not advertise the directory listing of anything
+Options -Indexes
+
+# ============================================================
+# PERFORMANCE - compression + caching. Both are no-ops if the
+# module is not loaded, so this is safe on any Apache build.
+# ============================================================
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml
+  AddOutputFilterByType DEFLATE application/javascript application/x-javascript
+  AddOutputFilterByType DEFLATE application/json application/xml image/svg+xml
+</IfModule>
+
+<IfModule mod_brotli.c>
+  AddOutputFilterByType BROTLI_COMPRESS text/html text/css application/javascript image/svg+xml
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  # Images and fonts are versioned by filename (name-<width>.webp) and never
+  # change in place, so they can be cached hard.
+  ExpiresByType image/webp                "access plus 1 year"
+  ExpiresByType image/jpeg                "access plus 1 year"
+  ExpiresByType image/png                 "access plus 1 year"
+  ExpiresByType image/svg+xml             "access plus 1 year"
+  ExpiresByType font/woff2                "access plus 1 year"
+  # CSS/JS keep their filename across deploys, so only a short cache -
+  # long enough to help a browsing session, short enough that a deploy lands.
+  ExpiresByType text/css                  "access plus 1 hour"
+  ExpiresByType application/javascript    "access plus 1 hour"
+  # HTML must always be revalidated.
+  ExpiresByType text/html                 "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(webp|jpg|jpeg|png|svg|woff2)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
