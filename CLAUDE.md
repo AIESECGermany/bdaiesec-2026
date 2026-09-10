@@ -245,7 +245,7 @@ come up naturally. Ordered by how much they actually matter:
 
 ## Performance (mobile-first)
 
-Work done 2026-09-09 on branch `perf/mobile-optimization` (pushed, NOT merged).
+Work done 2026-09-09 on branch `perf/mobile-optimization`, **merged into `main` and pushed 2026-09-10** (fast-forward, tip `c5a9eca`).
 Desktop rendering is deliberately unchanged. Verified numbers:
 
 | | Before | After |
