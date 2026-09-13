@@ -390,8 +390,13 @@ select:focus-visible,textarea:focus-visible{
 
 /* ════════════ PARTNERS ════════════ */
 .partners{padding:clamp(64px,8vw,96px) 0;background:var(--gray-50)}
-.partners-logos{display:grid;grid-template-columns:repeat(4,1fr);gap:1.1rem;margin-top:.5rem}
-.partner-logo-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);
+/* 3-up, not 4-up: 9 partner logos divide evenly into three full rows, so the wall
+   reads as a block instead of stranding a lone card on a fourth row. Flex rather
+   than grid so that if the count stops being a multiple of 3, the short last row
+   centres itself instead of hugging the left edge. */
+.partners-logos{display:flex;flex-wrap:wrap;justify-content:center;gap:1.1rem;margin-top:.5rem}
+.partner-logo-card{flex:0 1 calc((100% - 2.2rem)/3);
+  background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);
   padding:1.6rem 1.3rem;display:flex;align-items:center;justify-content:center;min-height:104px;
   transition:var(--trans);overflow:hidden}
 .partner-logo-card:hover{border-color:var(--blue-200);transform:translateY(-4px);box-shadow:var(--shadow-md)}
@@ -719,7 +724,7 @@ select:focus-visible,textarea:focus-visible{
   .pill{font-size:.76rem;padding:8px 14px}
   .hero-scroll-hint{display:none}
   .about-photos-small > :last-child{display:none}  /* :last-child, not img: each img now sits in its own <picture> */
-  .partners-logos{grid-template-columns:repeat(2,1fr)}
+  .partner-logo-card{flex-basis:calc((100% - 1.1rem)/2)}  /* 2-up; was a grid track */
   .partnership-cards{grid-template-columns:1fr}
   .form-row{grid-template-columns:1fr}
   .footer-grid{grid-template-columns:1fr 1fr;gap:2rem}

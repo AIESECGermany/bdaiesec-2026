@@ -32,7 +32,8 @@ Defined in `assets/css/style.css`:
   `.section-intro`, `.hero`(+`.hero--sub` shorter), hero word-reveal (`.hero-title .word`
   with staggered `animation-delay`), `.stats-grid`/`.stat-card` (animated counters via
   `data-target`), `.feature-grid`/`.feature-card`, `.process-layout`+`.steps`/`.step`,
-  `.quote-card` (dark text testimonial), `.stories-grid`/`.story-card`, `.partners-logos`,
+  `.quote-card` (dark text testimonial), `.stories-grid`/`.story-card`,
+  `.partners-logos` (flex 3-up, centred — NOT a grid; see the 2026-09-13 note),
   `.section-dark` contact, `.footer`, `.cta-banner`.
 - **Animation:** add `animate-up|left|right` + optional inline `animation-delay`;
   `main.js` IntersectionObserver adds `.in-view`. `prefers-reduced-motion` fully handled.
@@ -199,6 +200,43 @@ exposure — the LG München I ruling on embedded Google Fonts, Az. 3 O 17493/20
   the fully clean answer.
 - **Datenschutzerklärung** currently links to `aiesec.de/datenschutz`, which won't mention
   this site's form processor or host. Needs updating by whoever owns that page.
+
+## DONE — content update (2026-09-13)
+
+Owner-directed, all verified in headless Chrome at 1440 / 900 / 484px.
+
+- **Volkswagen added to the partner walls** (home, global-talent, hochschulmarketing),
+  positioned after Deutsche Bahn. Owner supplied the logo. Master
+  `assets/images/logo-vw.png` (800×800, white surround trimmed off the 1600px original,
+  re-squared with a small even margin like `logo-db.png`); variants
+  `assets/images/opt/logo-vw-160.{webp,png}`; untouched original archived in
+  `_originals/`. **White background kept on purpose** — `.partner-logo-card img` uses
+  `mix-blend-mode:multiply`, so white blends away on the white card, and alpha-keying a
+  navy circle leaves grey fringing on the curves.
+- **LC list trimmed: Stuttgart and Hohenheim removed** (homepage pills, the `anmeldung.html`
+  Stadt dropdown's combined "Stuttgart & Hohenheim" option, the Süd region list on
+  hochschulmarketing). Count copy now reads **21** in all 5 places (homepage intro, plus
+  hochschulmarketing's meta description, section heading, pricing tier and
+  national-partner paragraph).
+  - **Known inconsistency, deliberate:** the homepage lists **22** city names while the
+    copy claims **21**. Owner said 21 is the real active-LC count and asked for the number
+    alone to change. One more city still needs identifying before list and count agree —
+    do NOT "fix" this by editing the number back up. See also the cross-check flag below:
+    the old official dropdown only ever listed 15 cities, so the whole list is suspect.
+- **Partner wall is now flex, 3-up** (`.partners-logos`). Was a 4-column grid; 9 logos
+  made a 4/4/1 split that stranded one card on the left. 9 divides evenly by 3, and flex
+  with `justify-content:center` means any future short row centres itself instead of
+  hugging the left edge (visible on global-talent, where the dashed CTA card is a 10th
+  item). Breakpoint at 768px overrides `flex-basis` to 2-up.
+
+### Local review server — cache gotcha
+
+`python -m http.server` sends **no** `Cache-Control`, so Chrome applies heuristic
+freshness (~10% of the file's age) and will serve a stale `style.css` for hours — a CSS
+edit looks like it silently failed. Use a handler that sends
+`Cache-Control: no-store` and suppresses `Last-Modified`/`ETag`. If a review session
+starts with the plain server, the fix on the owner's side is one hard refresh
+(Ctrl+Shift+R).
 
 ## Backend / PHP - owned by the IT guy, NOT ours to change
 
