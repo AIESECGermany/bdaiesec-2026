@@ -251,6 +251,17 @@ tip of `main`, so something syncs repo -> production (most likely Plesk's Git
 extension pulling on push). NOT CONFIRMED - ask before merging to main, because
 a merge may go live instantly with no staging.
 
+**Deploy timeline observed (2026-09-13).** Production sat on a **26 Aug** build for two
+weeks - the Sept perf+security work (merged to `main` 2026-09-10, tip `c5a9eca`) was NOT
+live: zero `<picture>` tags, `assets/images/opt/*` 404, no honeypot, no `Cache-Control`.
+Then at **14:15 GMT on 2026-09-13** production jumped to a build byte-identical to
+`cdc2098` - so the perf build IS live now (2.9 MB -> 546 KB mobile). That landed ~2 min
+before commit `b7355ba` was pushed, which therefore did NOT go out with it. Conclusion:
+**the sync is not instant-on-push, and its trigger is still unknown** - it may be manual,
+or scheduled. Check `curl -sSI https://unternehmen.aiesec.de/ | grep -i last-modified`
+plus a content marker before assuming anything you pushed is live. Worth asking the IT
+guy how it is triggered - as a question, per the diplomacy note above.
+
 ### Open items only the backend owner can fix
 Recorded here deliberately: the owner decided NOT to send these as a list,
 because it reads as auditing a colleague's work (see the memory note on
